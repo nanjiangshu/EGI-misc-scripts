@@ -8,13 +8,14 @@ progname=`basename $0`
 size_progname=${#progname}
 wspace=`printf "%*s" $size_progname ""` 
 usage="
-Usage:  $progname -e ENDPOINT
+Usage:  $progname -e ENDPOINT [-short]
 Options:
   -e       STR      Set endpoint, short name or full name
                     valid short names: TR, IT, FR
+  -short            Do not list the detailed content of instances
   -h, --help        Print this help message and exit
 
-Created 2016-09-22, updated 2016-09-22, Nanjiang Shu
+Created 2016-09-22, updated 2016-10-13, Nanjiang Shu
 
 Examples:
     $progname -e IT
@@ -25,8 +26,29 @@ PrintHelp(){ #{{{
 #}}}
 ListVM(){ #{{{
     cmd="occi --endpoint $endpoint --auth x509 --user-cred $credfile --voms --action list --resource compute"
-    echo "$cmd"
+    echo "command: $cmd"
+    echo
     eval "$cmd"
+} 
+#}}}
+ListVM_detailed(){ #{{{
+    cmd="occi --endpoint $endpoint --auth x509 --user-cred $credfile --voms --action list --resource compute"
+    echo "command: $cmd"
+    echo
+    vmlist=$($cmd)
+    for vm in $vmlist; do
+        cmd="occi --endpoint $endpoint --auth x509 --user-cred $credfile --voms --action describe --resource $vm"
+        info=$($cmd)
+        title=$(echo "$info" | grep "^occi.core.title" | awk '{print $3}')
+        cpu=$(echo "$info" | grep "^occi.compute.cores" | awk '{print $3}')
+        memory=$(echo "$info" | grep "^occi.compute.memory" | awk '{print $3}')
+        publicip=$(echo "$info" | grep "occi.networkinterface.address" | awk '{print $3}')
+        echo -e "\n$vm"
+        echo -e "\tTitle: $title"
+        echo -e "\tCPU: $cpu"
+        echo -e "\tRAM: $memory"
+        echo -e "\tPublicIP: $publicip"
+    done
 } 
 #}}}
 
@@ -37,6 +59,7 @@ fi
 
 isQuiet=0
 endpoint=
+isShowDetailedInfo=1
 
 isNonOptionArg=0
 while [ "$1" != "" ]; do
@@ -49,6 +72,7 @@ while [ "$1" != "" ]; do
         case $1 in
             -h | --help) PrintHelp; exit;;
             -e|--e) endpoint=$2;shift;;
+            -short|--short) isShowDetailedInfo=0;;
             -q|-quiet|--quiet) isQuiet=1;;
             -*) echo Error! Wrong argument: $1 >&2; exit;;
         esac
@@ -75,5 +99,9 @@ if [[ ! "$endpoint" =~ "^http" ]] ;then
     esac
 fi
 
-ListVM
+if [ $isShowDetailedInfo -eq 0 ];then
+    ListVM
+else
+    ListVM_detailed
+fi
 
