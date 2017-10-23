@@ -82,7 +82,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-credfile=$(find /tmp -maxdepth 1 -name "x509up_*" )
+credfile=$(find /tmp/ -maxdepth 1 -name "x509up_*" )
 if [ "$credfile" == "" ];then
     echo "credfile not found at /tmp" >&2
     exit 1
